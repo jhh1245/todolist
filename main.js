@@ -1,6 +1,6 @@
 const express = require('express') //모듈을 가져와서 express라는 이름을 붙임(상수, 앞으로 이름이 바뀌지 않는다)
 const app = express() //express는 함수고, 리턴된 값을 app에 담는다
-const port = 3000
+const port = 3100
 const fs = require('fs');
 const template = require('./lib/template.js'); //내가 만든 모듈 
 const path = require('path'); // URL에서 ../ 이렇게 들어오면 내 컴퓨터 파일 볼 수 있는 문제 -> 보안을 위해서 모듈 추가
@@ -16,6 +16,7 @@ const db = mysql.createConnection({ //커넥션을 생성
     database: 'opentutorials'
 });
 const session = require('express-session') //로그인 
+
 
 db.connect(); // 실제 접속이 들어감
 
@@ -40,8 +41,10 @@ app.use((req, res, next) => { //여기 아래변수들은 모든 페이지에서
     }
     next();
 })
-app.get('/', (request, response) => { //경로, 접속자가 들어왔을 때 호출될 함수 
 
+
+
+app.get('/', (request, response) => { //경로, 접속자가 들어왔을 때 호출될 함수 
     db.query(`SELECT * FROM topic where state=0`, function (error, topics) { //에러일 경우 에러 정보를, 정상동작했을 땐 sql결과가 담김
         db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
             //console.log(topics);
@@ -64,7 +67,7 @@ app.get('/', (request, response) => { //경로, 접속자가 들어왔을 때 �
 app.get('/page/:pageId', function (request, response) { //* URL 패스방식으로 파라미터 처리하는 라우팅 기법 살펴봄
     const filteredId = path.parse(request.params.pageId).base // *쿼리스트링을 사용하지 않으니 변경
     //글 목록 가져옴 
-    db.query(`SELECT * FROM topic`, function (error, topics) {
+    db.query(`SELECT * FROM topic where state=0`, function (error, topics) {
         if (error) {
             throw error;
         }
@@ -100,7 +103,7 @@ app.get('/page/:pageId', function (request, response) { //* URL 패스방식으�
 
 app.get('/create', function (request, response) { //* URL 패스방식으로 파라미터 처리하는 라우팅 기법 살펴봄
 
-    db.query(`SELECT * FROM topic`, function (error, topics) {
+    db.query(`SELECT * FROM topic where state=0`, function (error, topics) {
         db.query(`SELECT * FROM author`, function (error2, authors) {
             const title = 'Create';
             const list = template.list(topics);
@@ -133,14 +136,10 @@ app.post('/create_process', function (request, response) { //* post방식이니�
     const post = request.body; // * qs.parse(body) --> request.body로 변경함 (body parser 사용하니까)
     const title = post.title;
     const description = post.description;
-    /*fs.writeFile(`data/${title}`, description, 'utf8',
-        function (err) { // 콜백 실행 = 파일 저장끝남
-            response.writeHead(302, { Location: `/?id=${title}` }); //다른페이지로 리다이렉트 시켜라
-            response.end();
-        });*/
+
     db.query(`
-            INSERT INTO topic (title, description, created, author_id) 
-              VALUES(?, ?, NOW(), ?)`,
+            INSERT INTO topic (title, description, created, author_id, state) 
+              VALUES(?, ?, NOW(), ?, 0)`,
         [post.title, post.description, post.author],
         function (error, result) {
             if (error) {
@@ -156,7 +155,7 @@ app.post('/create_process', function (request, response) { //* post방식이니�
 app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pageId에서 링크를 만들어줄 때 id를 넣어줬으니까 여기도 update/:pageid
 
     const filteredId = path.parse(request.params.pageId).base
-    db.query('SELECT * FROM topic', function (error, topics) {
+    db.query('SELECT * FROM topic where state=0', function (error, topics) {
         if (error) {
             throw error;
         }
@@ -167,24 +166,28 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
             }
             db.query(`SELECT * FROM author`, function (error2, authors) {
                 const list = template.list(topics);
+                ///if (topic.length >= 1) {
                 const html = template.HTML(topic[0].title, list,
                     `
-                <form action="/update_process" method="post">
-                  <input type="hidden" name="id" value="${topic[0].id}">
-                  <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
-                  <p>
-                    <textarea name="description" placeholder="description">${topic[0].description}</textarea>
-                  </p>
-                  <p>
-                    ${template.authorSelect(authors, topic[0].author_id)}
-                  </p>
-                  <p>
-                    <input type="submit">
-                  </p>
-                </form>
-                `,
+                    <form action="/update_process" method="post">
+                    <input type="hidden" name="id" value="${topic[0].id}">
+                    <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
+                    <p>
+                        <textarea name="description" placeholder="description">${topic[0].description}</textarea>
+                    </p>
+                    <p>
+                        ${template.authorSelect(authors, topic[0].author_id)}
+                    </p>
+                    <p>
+                        <input type="submit">
+                    </p>
+                    </form>
+                    `,
                     `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`
                 );
+                //} else {
+
+                //}
                 response.writeHead(200);
                 response.end(html);
             });
@@ -207,12 +210,37 @@ app.post('/update_process', function (request, response) {
     console.log(post);
 });
 
+// app.post('/delete_process', function (request, response) {
+//     const post = request.body;
+//     const id = post.id;
+//     const filteredId = path.parse(id).base
+
+
+//     db.query('DELETE FROM topic WHERE id = ?', [post.id], function (error, result) {
+//         if (error) {
+//             throw error;
+//         }
+//         //response.send("<script>input = confirm('삭제할거니?.'); if(input){ alert('ddd');}location.href='/'</script>");
+
+//         response.redirect('/');
+//     });
+// });
+
+
 app.post('/delete_process', function (request, response) {
     const post = request.body;
     const id = post.id; //id값을 추가. 어떤 게시글을 수정할건지 알아야 해서
-    const filteredId = path.parse(id).base
+    const filteredId = path.parse(id).base;
 
-    db.query('DELETE FROM topic WHERE id = ?', [post.id], function (error, result) {
+    // Sending a confirmation message to the client-side
+    response.send("<script>const input = confirm('삭제하시겠습니까?'); if(input){ window.location.href='/delete_confirm?id=" + id + "'; } else { window.location.href='/'; }</script>");
+});
+
+// Endpoint to handle delete confirmation
+app.get('/delete_confirm', function (request, response) {
+    const id = request.query.id;
+
+    db.query('DELETE FROM topic WHERE id = ?', [id], function (error, result) {
         if (error) {
             throw error;
         }
@@ -220,9 +248,10 @@ app.post('/delete_process', function (request, response) {
     });
 });
 
+
 //로그인기능 추가 24.03.10 
 app.get('/login', function (request, response) {
-    db.query(`SELECT * FROM topic`, function (error, topics) {
+    db.query(`SELECT * FROM topic where state=0`, function (error, topics) {
         if (error) {
             throw error;
         }
@@ -290,8 +319,22 @@ app.post('/complete_process', function (request, response) {
         }
         response.redirect('/');
     })
+});
 
+app.post('/cancel_complete_process', function (request, response) { //완료 목록을 다시 활성화 시킬 때 
+    const post = request.body;
+    const id = post.id; //id값을 추가. 어떤 게시글을 완료 할건지 알아야 해서
+    //const title = post.title;
+    //const description = post.description;
+    console.log(post);
 
+    db.query('UPDATE topic SET state=? WHERE id=?', [0, post.id], function (error, result) {
+        if (error) {
+            throw error;
+        }
+
+        response.redirect('/');
+    })
 });
 
 app.listen(port, () => {
