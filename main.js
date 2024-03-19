@@ -1,12 +1,8 @@
 const express = require('express') //모듈을 가져와서 express라는 이름을 붙임(상수, 앞으로 이름이 바뀌지 않는다)
 const app = express() //express는 함수고, 리턴된 값을 app에 담는다
 const port = 3100
-const fs = require('fs');
 const template = require('./lib/template.js'); //내가 만든 모듈 
 const path = require('path'); // URL에서 ../ 이렇게 들어오면 내 컴퓨터 파일 볼 수 있는 문제 -> 보안을 위해서 모듈 추가
-const sanitizeHtml = require('sanitize-html'); //입력 폼에서 <script>테그 등 입력해서 조작하지 않도록 하기 위해서 살균을 진행함 
-//실제 파일로는 <script>가 있지만, 페이지소스보기를 하면 안보임 (살균됨)
-const qs = require('querystring');
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const db = mysql.createConnection({ //커넥션을 생성 
@@ -15,12 +11,11 @@ const db = mysql.createConnection({ //커넥션을 생성
     password: 'root',
     database: 'opentutorials'
 });
+db.connect(); // 실제 접속이 일어나는 부분 
+
 const session = require('express-session') //로그인 
 
-
-db.connect(); // 실제 접속이 들어감
-
-app.use(express.static(path.join(__dirname, 'css')))
+app.use(express.static(path.join(__dirname, 'css'))) //css 적용 
 
 app.use(bodyParser.urlencoded({ extended: false }));
 // bodyParser가 실행되면서 그 결과로 미들웨어가 들어오게됨 bodyParser.urlencoded({extended: false}) 부분에 
@@ -49,14 +44,14 @@ app.get('/', (request, response) => { //경로, 접속자가 들어왔을 때 �
         db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
             //console.log(topics);
 
-            const title = 'Welcome';
-            const description = 'Todo list made by jh';
+            const title = 'Home';
+            //const description = 'Todo list made by jh';
             const list = template.list(topics);
             const complete_list = template.complete_list(complete_topics);
             const html = template.HTML(title, list,
-                `<h2>${title}</h2>${description}`,
-                `<a href="/create">create</a>
-            <a href="/login">login</a>`, complete_list
+                `<h2>${title}</h2>`,
+                `<a href="/create" class="custom-btn btn-4">create</a>
+            <a href="/login" class="custom-btn btn-4">login</a>`, complete_list
             );
             response.writeHead(200);
             response.end(html);
@@ -79,7 +74,8 @@ app.get('/page/:pageId', function (request, response) { //* URL 패스방식으�
 
             const title = topic[0].title;
             const description = topic[0].description;
-            const list = template.list(topics);
+            //const list = template.list(topics);
+            const list = '';
             const html = template.HTML(title, list,
                 `<h2>${title}</h2>
                 ${description}
@@ -133,7 +129,7 @@ app.get('/create', function (request, response) { //* URL 패스방식으로 파
 
 app.post('/create_process', function (request, response) { //* post방식이니까 앞에 app.post
 
-    const post = request.body; // * qs.parse(body) --> request.body로 변경함 (body parser 사용하니까)
+    const post = request.body;
     const title = post.title;
     const description = post.description;
 
@@ -160,13 +156,16 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
             throw error;
         }
 
+        console.log("이건 topics !!  로그 ===================");
+        console.log(topics);
         db.query(`SELECT * FROM topic WHERE id=?`, [filteredId], function (error2, topic) {
             if (error2) {
                 throw error2;
             }
+            console.log("이건 topic 로그 ===================");
+            console.log(topic);
             db.query(`SELECT * FROM author`, function (error2, authors) {
                 const list = template.list(topics);
-                ///if (topic.length >= 1) {
                 const html = template.HTML(topic[0].title, list,
                     `
                     <form action="/update_process" method="post">
@@ -185,9 +184,7 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
                     `,
                     `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`
                 );
-                //} else {
-
-                //}
+                console.log("title ================= " + topic[0].title)
                 response.writeHead(200);
                 response.end(html);
             });
@@ -249,7 +246,7 @@ app.get('/delete_confirm', function (request, response) {
 });
 
 
-//로그인기능 추가 24.03.10 
+//로그인기능 추가중 24.03.10 
 app.get('/login', function (request, response) {
     db.query(`SELECT * FROM topic where state=0`, function (error, topics) {
         if (error) {
