@@ -31,6 +31,15 @@ input[type="text"] {
     border-radius: 5px;
 }
 
+textarea {
+    width: 70%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 ul {
     list-style-type: none;
     padding: 0;
@@ -61,7 +70,6 @@ button {
 }
 
 .custom-btn {
-
     width: 80px;
     height: 40px;
     color: #fff;

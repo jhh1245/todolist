@@ -38,20 +38,17 @@ app.use((req, res, next) => { //여기 아래변수들은 모든 페이지에서
 })
 
 
-
 app.get('/', (request, response) => { //경로, 접속자가 들어왔을 때 호출될 함수 
     db.query(`SELECT * FROM topic where state=0`, function (error, topics) { //에러일 경우 에러 정보를, 정상동작했을 땐 sql결과가 담김
         db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
-            //console.log(topics);
-
-            const title = 'Home';
+            const title = ' ';
             //const description = 'Todo list made by jh';
             const list = template.list(topics);
             const complete_list = template.complete_list(complete_topics);
             const html = template.HTML(title, list,
                 `<h2>${title}</h2>`,
-                `<a href="/create" class="custom-btn btn-4">create</a>
-            <a href="/login" class="custom-btn btn-4">login</a>`, complete_list
+                `<a href="/create" class="custom-btn btn-4">create</a>`, complete_list
+                //<a href="/login" class="custom-btn btn-4">login</a>
             );
             response.writeHead(200);
             response.end(html);
@@ -77,19 +74,37 @@ app.get('/page/:pageId', function (request, response) { //* URL 패스방식으�
             //const list = template.list(topics);
             const list = '';
             const html = template.HTML(title, list,
-                `<h2>${title}</h2>
+                // `<h2>${title}</h2>
+                // ${description}
+                // <p>by ${topic[0].name}</p>`,
+                // `<a href="/create">create</a>
+                // <a href="/update/${filteredId}">update</a>
+                // <form action="/complete_process" method="post"> 
+                //         <input type="hidden" name="id" value="${filteredId}">
+                //         <input type="submit" value="complete">
+                //     </form>
+                //     <form action="/delete_process" method="post"> 
+                //         <input type="hidden" name="id" value="${filteredId}">
+                //         <input type="submit" value="delete">
+                //     </form>`
+
+                `<ul><li>
+                <h2>${title}</h2>
                 ${description}
                 <p>by ${topic[0].name}</p>`,
-                `<a href="/create">create</a>
-                <a href="/update/${filteredId}">update</a>
-                <form action="/complete_process" method="post"> 
-                        <input type="hidden" name="id" value="${filteredId}">
-                        <input type="submit" value="complete">
-                    </form>
-                    <form action="/delete_process" method="post"> 
-                        <input type="hidden" name="id" value="${filteredId}">
-                        <input type="submit" value="delete">
-                    </form>`
+                `<a href="/create" class="custom-btn btn-4">create</a>
+                <a href="/update/${filteredId}" class="custom-btn btn-4">update</a>
+                <form action="/complete_process" style="display:inline"  method="post"> 
+                    <input type="hidden" name="id" value="${filteredId}">
+                    <input type="submit" class="custom-btn btn-4" value="complete">
+                </form>
+                <form action="/delete_process" style="display:inline"  method="post"> 
+                    <input type="hidden" name="id" value="${filteredId}">
+                    <input type="submit" class="custom-btn btn-4" value="delete">
+                </form>
+                </li></ul>
+                `,
+                ` `
             );
             response.writeHead(200);
             response.end(html);
@@ -99,31 +114,52 @@ app.get('/page/:pageId', function (request, response) { //* URL 패스방식으�
 
 app.get('/create', function (request, response) { //* URL 패스방식으로 파라미터 처리하는 라우팅 기법 살펴봄
 
-    db.query(`SELECT * FROM topic where state=0`, function (error, topics) {
-        db.query(`SELECT * FROM author`, function (error2, authors) {
-            const title = 'Create';
-            const list = template.list(topics);
-            const html = template.HTML(title, list,
-                `
-              <form action="/create_process" method="post">
-                <p><input type="text" name="title" placeholder="할일을 적어주세요."></p>
-                <p>
-                  <textarea name="description" placeholder="상세 내용"></textarea>
-                </p>
-                <p>
-                    ${template.authorSelect(authors)}
-                </p>
-                <p>
-                  <input type="submit">
-                </p>
-              </form>
-              `,
-                `<a href="/create">create</a>`
-            );
-            response.writeHead(200);
-            response.end(html);
-        })
+    db.query(`SELECT * FROM topic where state = 0`, function (error, topics) {
+        db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
+            db.query(`SELECT * FROM author`, function (error2, authors) {
+                const title = 'Create';
+                const list = template.list(topics);
+                const complete_list = template.complete_list(complete_topics);
+                const html = template.HTML(title, list,
+                    `
+            <ul><li>
+                <form action="/create_process" method="post">
+                    <input type="text" name="title" placeholder="할일을 적어주세요.">
+                        <input type="submit" class="custom-btn btn-4">
+                            <p>
+                                <textarea name="description" placeholder="상세 내용"></textarea>
+                            </p>
+                            <p>작성자 
+                                ${template.authorSelect(authors)}
+                            </p>
 
+                        </form></li><ul>
+                        `,
+                    `<a href="/create" class="custom-btn btn-4">create</a>`, complete_list
+                );
+
+                // const html = template.HTML(title, list,
+                //     `
+                //   <form action="/create_process" method="post">
+
+                //     <p><input type="text" name="title" placeholder="할일을 적어주세요."></p>
+                //     <p>
+                //       <textarea name="description" placeholder="상세 내용"></textarea>
+                //     </p>
+                //     <p>
+                //         ${template.authorSelect(authors)}
+                //     </p>
+                //     <p>
+                //       <input type="submit">
+                //     </p>
+                //   </form>
+                //   `,
+                //     `<a href="/create">create</a>`
+                // );
+                response.writeHead(200);
+                response.end(html);
+            })
+        })
     });
 });
 
@@ -134,8 +170,8 @@ app.post('/create_process', function (request, response) { //* post방식이니�
     const description = post.description;
 
     db.query(`
-            INSERT INTO topic (title, description, created, author_id, state) 
-              VALUES(?, ?, NOW(), ?, 0)`,
+                        INSERT INTO topic (title, description, created, author_id, state)
+                        VALUES(?, ?, NOW(), ?, 0)`,
         [post.title, post.description, post.author],
         function (error, result) {
             if (error) {
@@ -151,44 +187,62 @@ app.post('/create_process', function (request, response) { //* post방식이니�
 app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pageId에서 링크를 만들어줄 때 id를 넣어줬으니까 여기도 update/:pageid
 
     const filteredId = path.parse(request.params.pageId).base
-    db.query('SELECT * FROM topic where state=0', function (error, topics) {
+    db.query('SELECT * FROM topic where state=0', function (error, topics) { // @@@@@@@@@@여기서 현재 글 제외한 목록보여주기!! @@@@@@@
         if (error) {
             throw error;
         }
 
-        console.log("이건 topics !!  로그 ===================");
-        console.log(topics);
-        db.query(`SELECT * FROM topic WHERE id=?`, [filteredId], function (error2, topic) {
-            if (error2) {
-                throw error2;
-            }
-            console.log("이건 topic 로그 ===================");
-            console.log(topic);
-            db.query(`SELECT * FROM author`, function (error2, authors) {
-                const list = template.list(topics);
-                const html = template.HTML(topic[0].title, list,
-                    `
-                    <form action="/update_process" method="post">
-                    <input type="hidden" name="id" value="${topic[0].id}">
-                    <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
-                    <p>
-                        <textarea name="description" placeholder="description">${topic[0].description}</textarea>
-                    </p>
-                    <p>
-                        ${template.authorSelect(authors, topic[0].author_id)}
-                    </p>
-                    <p>
-                        <input type="submit">
-                    </p>
-                    </form>
-                    `,
-                    `<a href="/create">create</a> <a href="/update?id=${topic[0].id}">update</a>`
-                );
-                console.log("title ================= " + topic[0].title)
-                response.writeHead(200);
-                response.end(html);
-            });
+        //console.log("이건 topics !!  로그 ===================");
+        //console.log(topics);
+        db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
+            db.query(`SELECT * FROM topic WHERE id=?`, [filteredId], function (error2, topic) {
+                if (error2) {
+                    throw error2;
+                }
+                //console.log("이건 topic 로그 ===================");
+                //console.log(topic);
+                db.query(`SELECT * FROM author`, function (error2, authors) {
+                    const list = template.list(topics);
+                    const complete_list = template.complete_list(complete_topics);
+                    const html = template.HTML(topic[0].title, list,
+                        // `
+                        // <form action="/update_process" method="post">
+                        // <input type="hidden" name="id" value="${topic[0].id}">
+                        // <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
+                        // <p>
+                        //     <textarea name="description" placeholder="description">${topic[0].description}</textarea>
+                        // </p>
+                        // <p>
+                        //     ${template.authorSelect(authors, topic[0].author_id)}
+                        // </p>
+                        // <p>
+                        //     <input type="submit">
+                        // </p>
+                        // </form>
+                        // `
 
+                        `
+                        <ul><li>
+                            <form action="/update_process" method="post">
+                                <input type="hidden" name="id" value="${topic[0].id}">
+                                    <input type="text" name="title" placeholder="title" value="${topic[0].title}">
+                                        <input type="submit" class="custom-btn btn-4">
+                                            <p>
+                                                <textarea name="description" placeholder="description">${topic[0].description}</textarea>
+                                            </p>
+                                            <p>작성자 
+                                                ${template.authorSelect(authors, topic[0].author_id)}
+                                            </p>
+                                        </form></li><ul>
+                                        `,
+                        `<a href="/create" class="custom-btn btn-4">create</a>`,
+                        complete_list
+                    );
+                    console.log("title ================= " + topic[0].title)
+                    response.writeHead(200);
+                    response.end(html);
+                });
+            });
         });
     });
 });
@@ -285,7 +339,7 @@ app.post('/login_process', function (request, response) {
             response.send("<script> alert('존재하지 않는 아이디입니다.'); location.href='/'</script>");
         } else {
             console.log(result[0]);
-            request.session.member = request[0]; //세션에 저장 
+            request.session.member = request[0]; //세션에 저장
             response.send("<script> alert('로그인 되었습니다.'); location.href='/'</script>");
         }
         //response.writeHead(302);
