@@ -5,6 +5,13 @@ const template = require('./lib/template.js'); //내가 만든 모듈
 const path = require('path'); // URL에서 ../ 이렇게 들어오면 내 컴퓨터 파일 볼 수 있는 문제 -> 보안을 위해서 모듈 추가
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
+/*const db = mysql.createConnection({ //커넥션을 생성 
+    host: 'localhost',
+    user: 'root',
+    password: 'root',
+    database: 'opentutorials'
+});*/
+
 const db = mysql.createConnection({ //커넥션을 생성 
     host: 'localhost',
     user: 'root',
@@ -117,11 +124,12 @@ app.get('/create', function (request, response) { //* URL 패스방식으로 파
     db.query(`SELECT * FROM topic where state = 0`, function (error, topics) {
         db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
             db.query(`SELECT * FROM author`, function (error2, authors) {
-                const title = 'Create';
-                const list = template.list(topics);
-                const complete_list = template.complete_list(complete_topics);
-                const html = template.HTML(title, list,
-                    `
+                db.query(`SELECT * FROM worktype`, function (error3, worktypes) {
+                    const title = 'Create';
+                    const list = template.list(topics);
+                    const complete_list = template.complete_list(complete_topics);
+                    const html = template.HTML(title, list,
+                        `
             <ul><li>
                 <form action="/create_process" method="post">
                     <input type="text" name="title" placeholder="할일을 적어주세요.">
@@ -129,35 +137,40 @@ app.get('/create', function (request, response) { //* URL 패스방식으로 파
                             <p>
                                 <textarea name="description" placeholder="상세 내용"></textarea>
                             </p>
-                            <p>작성자 
+                            <p>작성자  
                                 ${template.authorSelect(authors)}
+                            </p>
+                            <p>구분  
+                                ${template.worktypeSelect(worktypes)}
                             </p>
 
                         </form></li><ul>
                         `,
-                    `<a href="/create" class="custom-btn btn-4">create</a>`, complete_list
-                );
+                        `<a href="/create" class="custom-btn btn-4">create</a>`, complete_list
+                    );
 
-                // const html = template.HTML(title, list,
-                //     `
-                //   <form action="/create_process" method="post">
 
-                //     <p><input type="text" name="title" placeholder="할일을 적어주세요."></p>
-                //     <p>
-                //       <textarea name="description" placeholder="상세 내용"></textarea>
-                //     </p>
-                //     <p>
-                //         ${template.authorSelect(authors)}
-                //     </p>
-                //     <p>
-                //       <input type="submit">
-                //     </p>
-                //   </form>
-                //   `,
-                //     `<a href="/create">create</a>`
-                // );
-                response.writeHead(200);
-                response.end(html);
+                    // const html = template.HTML(title, list,
+                    //     `
+                    //   <form action="/create_process" method="post">
+
+                    //     <p><input type="text" name="title" placeholder="할일을 적어주세요."></p>
+                    //     <p>
+                    //       <textarea name="description" placeholder="상세 내용"></textarea>
+                    //     </p>
+                    //     <p>
+                    //         ${template.authorSelect(authors)}
+                    //     </p>
+                    //     <p>
+                    //       <input type="submit">
+                    //     </p>
+                    //   </form>
+                    //   `,
+                    //     `<a href="/create">create</a>`
+                    // );
+                    response.writeHead(200);
+                    response.end(html);
+                })
             })
         })
     });
@@ -166,13 +179,12 @@ app.get('/create', function (request, response) { //* URL 패스방식으로 파
 app.post('/create_process', function (request, response) { //* post방식이니까 앞에 app.post
 
     const post = request.body;
-    const title = post.title;
-    const description = post.description;
 
+    //console.log('post=' + post);
     db.query(`
-                        INSERT INTO topic (title, description, created, author_id, state)
-                        VALUES(?, ?, NOW(), ?, 0)`,
-        [post.title, post.description, post.author],
+                        INSERT INTO topic (title, description, created, author_id, state, worktype_id)
+                        VALUES(?, ?, NOW(), ?, 0, ?)`,
+        [post.title, post.description, post.author, post.worktype],
         function (error, result) {
             if (error) {
                 throw error;
@@ -180,7 +192,7 @@ app.post('/create_process', function (request, response) { //* post방식이니�
             response.writeHead(302, { Location: `/?id=${result.insertId}` });
             response.end();
         }
-    )
+    );
 });
 
 
