@@ -200,40 +200,30 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
 
     const filteredId = path.parse(request.params.pageId).base
     db.query('SELECT * FROM topic where state=0', function (error, topics) { // @@@@@@@@@@여기서 현재 글 제외한 목록보여주기!! @@@@@@@
-        if (error) {
-            throw error;
-        }
-
-        //console.log("이건 topics !!  로그 ===================");
-        //console.log(topics);
         db.query(`SELECT * FROM topic where state=1`, function (error, complete_topics) { //완료한 목록
             db.query(`SELECT * FROM topic WHERE id=?`, [filteredId], function (error2, topic) {
-                if (error2) {
-                    throw error2;
-                }
-                //console.log("이건 topic 로그 ===================");
-                //console.log(topic);
                 db.query(`SELECT * FROM author`, function (error2, authors) {
-                    const list = template.list(topics);
-                    const complete_list = template.complete_list(complete_topics);
-                    const html = template.HTML(topic[0].title, list,
-                        // `
-                        // <form action="/update_process" method="post">
-                        // <input type="hidden" name="id" value="${topic[0].id}">
-                        // <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
-                        // <p>
-                        //     <textarea name="description" placeholder="description">${topic[0].description}</textarea>
-                        // </p>
-                        // <p>
-                        //     ${template.authorSelect(authors, topic[0].author_id)}
-                        // </p>
-                        // <p>
-                        //     <input type="submit">
-                        // </p>
-                        // </form>
-                        // `
+                    db.query(`SELECT * FROM worktype`, function (error2, worktypes) {
+                        const list = template.list(topics);
+                        const complete_list = template.complete_list(complete_topics);
+                        const html = template.HTML(topic[0].title, list,
+                            // `
+                            // <form action="/update_process" method="post">
+                            // <input type="hidden" name="id" value="${topic[0].id}">
+                            // <p><input type="text" name="title" placeholder="title" value="${topic[0].title}"></p>
+                            // <p>
+                            //     <textarea name="description" placeholder="description">${topic[0].description}</textarea>
+                            // </p>
+                            // <p>
+                            //     ${template.authorSelect(authors, topic[0].author_id)}
+                            // </p>
+                            // <p>
+                            //     <input type="submit">
+                            // </p>
+                            // </form>
+                            // `
 
-                        `
+                            `
                         <ul><li>
                             <form action="/update_process" method="post">
                                 <input type="hidden" name="id" value="${topic[0].id}">
@@ -245,14 +235,18 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
                                             <p>작성자 
                                                 ${template.authorSelect(authors, topic[0].author_id)}
                                             </p>
+                                            <p>구분
+                                                ${template.worktypeSelect(worktypes, topic[0].worktype_id)}
+                                            </p>
                                         </form></li><ul>
                                         `,
-                        `<a href="/create" class="custom-btn btn-4">create</a>`,
-                        complete_list
-                    );
-                    console.log("title ================= " + topic[0].title)
-                    response.writeHead(200);
-                    response.end(html);
+                            `<a href="/create" class="custom-btn btn-4">create</a>`,
+                            complete_list
+                        );
+                        console.log("title ================= " + topic[0].title)
+                        response.writeHead(200);
+                        response.end(html);
+                    });
                 });
             });
         });
@@ -261,41 +255,19 @@ app.get('/update/:pageId', function (request, response) { // ** 위에 /page/:pa
 
 app.post('/update_process', function (request, response) {
     const post = request.body;
-    const id = post.id; //id값을 추가. 어떤 게시글을 수정할건지 알아야 해서
-    const title = post.title;
-    const description = post.description;
 
-
-    db.query('UPDATE topic SET title=?, description=?, author_id=? WHERE id=?', [post.title, post.description, post.author, post.id], function (error, result) {
+    db.query('UPDATE topic SET title=?, description=?, author_id=?, worktype_id=? WHERE id=?', [post.title, post.description, post.author, post.worktype, post.id], function (error, result) {
         response.writeHead(302, { Location: `/page/${post.id}` });
         response.end();
     })
     console.log(post);
 });
 
-// app.post('/delete_process', function (request, response) {
-//     const post = request.body;
-//     const id = post.id;
-//     const filteredId = path.parse(id).base
-
-
-//     db.query('DELETE FROM topic WHERE id = ?', [post.id], function (error, result) {
-//         if (error) {
-//             throw error;
-//         }
-//         //response.send("<script>input = confirm('삭제할거니?.'); if(input){ alert('ddd');}location.href='/'</script>");
-
-//         response.redirect('/');
-//     });
-// });
-
-
 app.post('/delete_process', function (request, response) {
     const post = request.body;
     const id = post.id; //id값을 추가. 어떤 게시글을 수정할건지 알아야 해서
     const filteredId = path.parse(id).base;
 
-    // Sending a confirmation message to the client-side
     response.send("<script>const input = confirm('삭제하시겠습니까?'); if(input){ window.location.href='/delete_confirm?id=" + id + "'; } else { window.location.href='/'; }</script>");
 });
 
